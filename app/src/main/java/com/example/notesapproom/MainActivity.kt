@@ -19,7 +19,7 @@ import com.example.notesapproom.data.NoteViewModel
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var noteViewModel: NoteViewModel
+    private val noteViewModel by lazy { ViewModelProvider(this).get(NoteViewModel::class.java) }
 
     lateinit var titleEditText: EditText
     lateinit var noteEditText: EditText
@@ -45,8 +45,6 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        //initialize view model
-        noteViewModel = ViewModelProvider(this).get(NoteViewModel::class.java)
         getAllNotes()
 
         addButton.setOnClickListener {
@@ -56,10 +54,10 @@ class MainActivity : AppCompatActivity() {
 
             if (note.trim().isNotEmpty() && title.trim().isNotEmpty()) {
                 insertNote(title, note)
-//                getAllNotes()
                 clearFields()
             } else {
-                Toast.makeText(applicationContext, "please enter your note", Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, "please enter your note", Toast.LENGTH_SHORT)
+                    .show()
 
             }
 
@@ -71,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             if (keyword.trim().isNotEmpty()) {
                 getNote(keyword)
             } else {
-                Toast.makeText(applicationContext, "please enter the title", Toast.LENGTH_SHORT).show()
+                getAllNotes()
             }
         }
 
@@ -79,29 +77,94 @@ class MainActivity : AppCompatActivity() {
 
     private fun insertNote(title: String, note: String) {
         noteViewModel.addNote(Note(0, title, note))
+        getAllNotes()
         Toast.makeText(applicationContext, "Added Successfully!", Toast.LENGTH_SHORT).show()
     }
 
-    fun updateNote(id: Int, title: String, note: String) {
+    private fun updateNote(id: Int, title: String, note: String) {
         noteViewModel.updateNote(Note(id, title, note))
+        getAllNotes()
         Toast.makeText(applicationContext, "Updated Successfully!", Toast.LENGTH_SHORT).show()
     }
 
-    fun deleteNote(id: Int, title: String, note: String) {
+    private fun deleteNote(id: Int, title: String, note: String) {
         noteViewModel.deleteNote(Note(id, title, note))
+        getAllNotes()
         Toast.makeText(applicationContext, "Deleted Successfully!", Toast.LENGTH_SHORT).show()
     }
 
-    private fun getNote(keyword: String){
+    private fun getNote(keyword: String) {
         noteViewModel.searchNote("%$keyword%").observe(this, { notes ->
             adapter.setData(notes)
         })
     }
 
-    fun getAllNotes() {
+    private fun getAllNotes() {
         noteViewModel.getAllNotes.observe(this, { notes ->
             adapter.setData(notes)
         })
+    }
+
+
+    fun showEditDialog(note: Note) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.edit_dialog_layout)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        //views
+        val titleEditText = dialog.findViewById<TextView>(R.id.edt_titleDialog)
+        val noteEditText = dialog.findViewById<TextView>(R.id.edt_noteDialog)
+        val saveButton = dialog.findViewById<Button>(R.id.btn_saveDialog)
+
+
+        val id = note.id
+        val title = note.title
+        val note = note.note
+        titleEditText.text = title
+        noteEditText.text = note
+
+        saveButton.setOnClickListener {
+            val updatedTitle = titleEditText.text.toString()
+            val updatedNote = noteEditText.text.toString()
+            if (updatedTitle.trim().isNotEmpty() && updatedNote.trim().isNotEmpty()) {
+                if (updatedTitle != title || updatedNote != note) {
+                    updateNote(id, updatedTitle, updatedNote)
+                }
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    fun showDeleteDialog(note: Note) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.delete_dialog_layout)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        //views
+        val deleteButton = dialog.findViewById<Button>(R.id.btn_deleteDialog)
+        val cancelButton = dialog.findViewById<Button>(R.id.btn_cancelDialog)
+        val titleTextView = dialog.findViewById<TextView>(R.id.tv_titleDialog)
+        val noteTextView = dialog.findViewById<TextView>(R.id.tv_noteDialog)
+
+        val id = note.id
+        val title = note.title
+        val note = note.note
+
+        titleTextView.text = title
+        noteTextView.text = note
+
+        cancelButton.setOnClickListener { dialog.cancel() }
+
+        deleteButton.setOnClickListener {
+            deleteNote(id, title, note)
+            clearFields()
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun clearFields() {
@@ -129,4 +192,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+
 }
